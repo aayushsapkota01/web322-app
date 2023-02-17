@@ -12,8 +12,6 @@ const express = require("express"); // instance of the express app
 const path = require("path");
 const app = express();
 
-const upload = multer(); // no { storage: storage }
-
 // Defining the "static" middleware to serve static files
 app.use(express.static("public"));
 
@@ -28,6 +26,8 @@ cloudinary.config({
   api_secret: "P9WPAgDyFC3HSGmIR_A7yuCMsS8",
   secure: true,
 });
+
+const upload = multer(); // no { storage: storage }
 
 // setup a 'route' to listen on the default url path
 app.get("/", (req, res) => {

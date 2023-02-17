@@ -4,8 +4,8 @@
  * of this assignment has been copied manually or electronically from any other source
  * (including 3rd party web sites) or distributed to other students. *
  * Name: Aayush Sapkota Student ID: 152406211 Date: feb 17, 2023 *
- * Cyclic Web App URL: ________________________________________________________ *
- * GitHub Repository URL: ______________________________________________________
+ * Cyclic Web App URL:  https://filthy-blue-battledress.cyclic.app *
+ * GitHub Repository URL: https://github.com/aayushsapkota01/web322-app
  * ********************************************************************************/
 var blogService = require("./blog-service.js"); // Blog Service Module
 const express = require("express"); // instance of the express app

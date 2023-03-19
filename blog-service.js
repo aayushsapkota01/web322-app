@@ -44,6 +44,19 @@ const getPublishedPosts = () => {
   });
 };
 
+const getPublishedPostsByCategory = (category) => {
+  return new Promise((resolve, reject) => {
+    const publishedPosts = posts.filter(
+      (post) => post.published == true && post.category == category
+    );
+    if (publishedPosts.length === 0) {
+      reject("no results returned");
+      return;
+    }
+    resolve(publishedPosts);
+  });
+};
+
 const getCategories = () => {
   return new Promise((resolve, reject) => {
     if (categories.length === 0) {
@@ -64,6 +77,11 @@ function addPost(postData) {
 
     // Setting the next post id
     postData.id = posts.length + 1;
+    const currentDate = new Date();
+    const formattedDate = `${currentDate.getFullYear()}-${
+      currentDate.getMonth() + 1
+    }-${currentDate.getDate()}`;
+    postData.postDate = formattedDate;
 
     // Adding to posts
     posts.push(postData);
@@ -115,6 +133,7 @@ module.exports = {
   initialize,
   getAllPosts,
   getPublishedPosts,
+  getPublishedPostsByCategory,
   getCategories,
   addPost,
   getPostById,

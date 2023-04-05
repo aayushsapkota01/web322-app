@@ -1,11 +1,16 @@
 /*********************************************************************************
- * WEB322 – Assignment 04
- * I declare that this assignment is my own work in accordance with Seneca Academic Policy. No part
- * of this assignment has been copied manually or electronically from any other source
- * (including 3rd party web sites) or distributed to other students. *
- * Name: Aayush Sapkota     Student ID: 152406211      Date: March 19, 2023*
- * Cyclic Web App URL: ________________________________________________________ *
- * GitHub Repository URL: ______________________________________________________
+ * WEB322 – Assignment 05
+ *
+ * I declare that this assignment is my own work in accordance with Seneca Academic Policy. No part of this
+ * assignment has been copied manually or electronically from any other source (including web sites) or
+ * distributed to other students.
+ *
+ * Name: Aayush Sapkota     Student ID: 152406211      Date: April 04, 2023
+ *
+ * Cyclic Web App URL: https://filthy-blue-battledress.cyclic.app
+ *
+ * GitHub Repository URL: https://github.com/aayushsapkota01/web322-app
+ *
  * ********************************************************************************/
 
 var blogService = require("./blog-service.js"); // Blog Service Module
@@ -14,11 +19,14 @@ const path = require("path");
 const app = express();
 const stripJs = require("strip-js");
 
-// require the "express-handlebars"
+//  ================== require the "express-handlebars" ==================
 const exphbs = require("express-handlebars");
 
-// Defining the "static" middleware to serve static files
+//  ================== Defining the "static" middleware to serve static files ==================
 app.use(express.static("public"));
+
+app.use(express.urlencoded({ extended: true }));
+
 app.engine(
   "hbs",
   exphbs.engine({
@@ -46,6 +54,12 @@ app.engine(
       },
       safeHTML: function (context) {
         return stripJs(context);
+      },
+      formatDate: function (dateObj) {
+        let year = dateObj.getFullYear();
+        let month = (dateObj.getMonth() + 1).toString();
+        let day = dateObj.getDate().toString();
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       },
     },
   })
@@ -77,17 +91,17 @@ app.use(function (req, res, next) {
   next();
 });
 
-// setup a 'route' to listen on the default url path
+// ==== setup a 'route' to listen on the default url path =====
 app.get("/", (req, res) => {
   res.redirect("/blog");
 });
 
-// setup another route to listen on /about
+//  ================== setup another route to listen on /about ==================
 app.get("/about", function (req, res) {
   res.render("about");
 });
 
-// setup another route to listen on /blog "ASSIGNMENT 4 UPDATED"
+//  =========  setup another route to listen on /blog "ASSIGNMENT 4 UPDATED" =========
 app.get("/blog", async (req, res) => {
   // Declare an object to store properties for the view
   let viewData = {};
@@ -132,6 +146,7 @@ app.get("/blog", async (req, res) => {
   res.render("blog", { data: viewData });
 });
 
+// ================== /blog/:id ==================
 app.get("/blog/:id", async (req, res) => {
   // Declare an object to store properties for the view
   let viewData = {};
@@ -185,7 +200,9 @@ app.get("/posts", (req, res) => {
     blogService
       .getPostsByCategory(req.query.category)
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "no results" });
       })
       // Error Handling
       .catch((err) => {
@@ -198,7 +215,9 @@ app.get("/posts", (req, res) => {
     blogService
       .getPostsByMinDate(req.query.minDate)
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "no results" });
       })
       // Error Handling
       .catch((err) => {
@@ -211,7 +230,9 @@ app.get("/posts", (req, res) => {
     blogService
       .getAllPosts()
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "no results" });
       })
       // Error Handling
       .catch((err) => {
@@ -225,19 +246,28 @@ app.get("/categories", (req, res) => {
   blogService
     .getCategories()
     .then((data) => {
-      res.render("categories", { categories: data });
+      data.length > 0
+        ? res.render("categories", { categories: data })
+        : res.render("categories", { message: "no results" });
     })
     .catch((err) => {
       res.render("categories", { message: "no results" });
     });
 });
 
-// Adding a routes in server.js to support the new view
+// ================== Adding a routes in server.js to support the new view ==================
 app.get("/posts/add", (req, res) => {
-  res.render("addPost");
+  blogService
+    .getCategories()
+    .then((categories) => {
+      res.render("addPost", { categories: categories });
+    })
+    .catch(() => {
+      res.render("addPost", { categories: [] });
+    });
 });
 
-// post request for post add
+//  ================== post request for post add ==================
 app.post("/posts/add", upload.single("featureImage"), (req, res) => {
   if (req.file) {
     let streamUpload = (req) => {
@@ -290,7 +320,7 @@ app.post("/posts/add", upload.single("featureImage"), (req, res) => {
   }
 });
 
-// get post by id
+// ================== get post by id ==================
 app.get("/post/:value", (req, res) => {
   blogService
     .getPostById(req.params.value)
@@ -303,9 +333,50 @@ app.get("/post/:value", (req, res) => {
     });
 });
 
-// Defining the custom 404 error handling route
-app.use((req, res) => {
-  res.status(404).render("404");
+// Assignment 5
+app.get("/categories/add", (req, res) => {
+  res.render("addCategory");
+});
+
+app.post("/categories/add", (req, res) => {
+  let categoryObj = {};
+
+  categoryObj.category = req.body.category;
+
+  // Adding the post if everything is okay
+  // Only add the post if the entries make sense
+  if (categoryObj.category) {
+    blogService
+      .addCategory(categoryObj)
+      .then(() => {
+        res.redirect("/categories");
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+});
+
+app.get("/categories/delete/:id", (req, res) => {
+  blogService
+    .deleteCategoryById(req.params.id)
+    .then(() => {
+      res.redirect("/categories");
+    })
+    .catch(() => {
+      console.log("Unable to remove category / Category not found");
+    });
+});
+
+app.get("/posts/delete/:id", (req, res) => {
+  blogService
+    .deletePostById(req.params.id)
+    .then(() => {
+      res.redirect("/posts");
+    })
+    .catch(() => {
+      console.log("Unable to remove post / Post not found");
+    });
 });
 
 // Start the server

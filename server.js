@@ -4,25 +4,31 @@
  * of this assignment has been copied manually or electronically from any other source
  * (including 3rd party web sites) or distributed to other students. *
  * Name: Aayush Sapkota     Student ID: 152406211      Date: March 19, 2023*
- * Cyclic Web App URL: ________________________________________________________ *
- * GitHub Repository URL: ______________________________________________________
+ * Cyclic Web App URL: https://filthy-blue-battledress.cyclic.app *
+ * GitHub Repository URL: https://github.com/aayushsapkota01/web322-app
  * ********************************************************************************/
 
 var blogService = require("./blog-service.js"); // Blog Service Module
+const { connect } = require("http2");
+const { rejects } = require("assert");
 const express = require("express"); // instance of the express app
 const path = require("path");
 const app = express();
 const stripJs = require("strip-js");
 
-// require the "express-handlebars"
+//  ================== require the "express-handlebars" ==================
 const exphbs = require("express-handlebars");
 
-// Defining the "static" middleware to serve static files
+//  ================== Updating Routes (server.js) to Add / Remove Categories & Posts ==================
+app.use(express.urlencoded({ extended: true }));
+
+//  ================== Defining the "static" middleware to serve static files ==================
 app.use(express.static("public"));
 app.engine(
-  "hbs",
+  ".hbs",
   exphbs.engine({
-    extname: "hbs",
+    extname: ".hbs",
+
     helpers: {
       navLink: function (url, options) {
         return (
@@ -35,6 +41,7 @@ app.engine(
           "</a></li>"
         );
       },
+
       equal: function (lvalue, rvalue, options) {
         if (arguments.length < 3)
           throw new Error("Handlebars Helper equal needs 2 parameters");
@@ -46,6 +53,12 @@ app.engine(
       },
       safeHTML: function (context) {
         return stripJs(context);
+      },
+      formatDate: function (dateObj) {
+        let year = dateObj.getFullYear();
+        let month = (dateObj.getMonth() + 1).toString();
+        let day = dateObj.getDate().toString();
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       },
     },
   })
@@ -77,17 +90,17 @@ app.use(function (req, res, next) {
   next();
 });
 
-// setup a 'route' to listen on the default url path
+// ================== setup a 'route' to listen on the default url path ==================
 app.get("/", (req, res) => {
   res.redirect("/blog");
 });
 
-// setup another route to listen on /about
-app.get("/about", function (req, res) {
+//  ================== setup another route to listen on /about ==================
+app.get("/about", (req, res) => {
   res.render("about");
 });
 
-// setup another route to listen on /blog "ASSIGNMENT 4 UPDATED"
+//  ================== setup another route to listen on /blog "ASSIGNMENT 4 UPDATED" ==================
 app.get("/blog", async (req, res) => {
   // Declare an object to store properties for the view
   let viewData = {};
@@ -132,6 +145,7 @@ app.get("/blog", async (req, res) => {
   res.render("blog", { data: viewData });
 });
 
+// ================== /blog/:id ==================
 app.get("/blog/:id", async (req, res) => {
   // Declare an object to store properties for the view
   let viewData = {};
@@ -178,66 +192,62 @@ app.get("/blog/:id", async (req, res) => {
   // render the "blog" view with all of the data (viewData)
   res.render("blog", { data: viewData });
 });
-// setup another route to listen on /posts
+//  ================== setup another route to listen on /posts ==================
 app.get("/posts", (req, res) => {
   // Checking if a category was provided
   if (req.query.category) {
     blogService
       .getPostsByCategory(req.query.category)
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "No results." });
       })
       // Error Handling
       .catch((err) => {
-        res.render("posts", { message: "no results" });
+        res.render("posts", { message: "No results" });
       });
   }
 
   // Checking if a minimum date is provided
   else if (req.query.minDate) {
-    blogService
-      .getPostsByMinDate(req.query.minDate)
+    getPostsByMinDate(req.query.minDate)
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "No results." });
       })
       // Error Handling
       .catch((err) => {
-        res.render("posts", { message: "no results" });
+        res.render("posts", { message: "No results" });
       });
-  }
-
-  // Checking whether no specification queries were provided
-  else {
+  } else {
     blogService
       .getAllPosts()
       .then((data) => {
-        res.render("posts", { posts: data });
+        data.length > 0
+          ? res.render("posts", { posts: data })
+          : res.render("posts", { message: "No results." });
       })
       // Error Handling
       .catch((err) => {
-        res.render("posts", { message: "no results" });
+        res.render("posts", { message: "No results" });
       });
   }
 });
-
-// setup another route to listen on /categories
-app.get("/categories", (req, res) => {
+// ================== Adding a routes in server.js to support the new view ==================
+app.get("/posts/add", (req, res) => {
   blogService
     .getCategories()
-    .then((data) => {
-      res.render("categories", { categories: data });
+    .then((categories) => {
+      res.render("addPost", { categories: categories });
     })
-    .catch((err) => {
-      res.render("categories", { message: "no results" });
+    .catch(() => {
+      res.render("addPost", { categories: [] });
     });
 });
 
-// Adding a routes in server.js to support the new view
-app.get("/posts/add", (req, res) => {
-  res.render("addPost");
-});
-
-// post request for post add
+//  ================== post request for post add ==================
 app.post("/posts/add", upload.single("featureImage"), (req, res) => {
   if (req.file) {
     let streamUpload = (req) => {
@@ -259,16 +269,16 @@ app.post("/posts/add", upload.single("featureImage"), (req, res) => {
     }
     upload(req)
       .then((uploaded) => {
-        // added error handling
+        // ====== ADDED ERROR HALDING ====== //
         processPost(uploaded.url);
       })
       .catch((err) => {
-        s;
         res.send(err);
       });
   } else {
     processPost("");
   }
+
   function processPost(imageUrl) {
     req.body.featureImage = imageUrl;
 
@@ -281,8 +291,6 @@ app.post("/posts/add", upload.single("featureImage"), (req, res) => {
     postObj.featureImage = req.body.featureImage;
     postObj.published = req.body.published;
 
-    // Adding the post if everything is okay
-    // Only add the post if the entries make sense
     if (postObj.title) {
       blogService.addPost(postObj);
     }
@@ -290,7 +298,7 @@ app.post("/posts/add", upload.single("featureImage"), (req, res) => {
   }
 });
 
-// get post by id
+// ================== get post by id ==================
 app.get("/post/:value", (req, res) => {
   blogService
     .getPostById(req.params.value)
@@ -303,13 +311,75 @@ app.get("/post/:value", (req, res) => {
     });
 });
 
-// Defining the custom 404 error handling route
+// ================== setup another route to listen on /categories ==================
+app.get("/categories", (req, res) => {
+  blogService
+    .getCategories()
+    .then((data) => {
+      if (data.length > 0) {
+        res.render("categories", { categories: data });
+      } else {
+        res.render("categories", { message: "no results" });
+      }
+    })
+    // Error Handling
+    .catch((err) => {
+      res.render("categories", { message: "no results" });
+    });
+});
+// ==================  /categories/add==================
+app.get("/categories/add", (req, res) => {
+  res.render("addCategory");
+});
+
+// ==================  /categories/add ==================
+app.post("/categories/add", (req, res) => {
+  let categoryObj = {};
+
+  categoryObj.category = req.body.category;
+
+  if (categoryObj.category) {
+    blogService
+      .addCategory(categoryObj)
+      .then(() => {
+        res.redirect("/categories");
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+});
+
+// ==================  /categories/delete/:id ==================
+app.get("/categories/delete/:id", (req, res) => {
+  blogService
+    .deleteCategoryById(req.params.id)
+    .then(() => {
+      res.redirect("/categories");
+    })
+    .catch(() => {
+      console.log("Unable to remove category / Category not found");
+    });
+});
+
+// ==================  /posts/delete/:id ==================
+app.get("/posts/delete/:id", (req, res) => {
+  deletePostById(req.params.id)
+    .then(() => {
+      res.redirect("/posts");
+    })
+    .catch(() => {
+      console.log("Unable to remove category / Category not found");
+    });
+});
+
+// ================== Defining the custom 404 error handling route ==================
 app.use((req, res) => {
   res.status(404).render("404");
 });
 
-// Start the server
-const port = process.env.PORT || 8080;
+// ============== Start the server ==================
+const port = process.env.PORT || 8500;
 blogService
   .initialize()
   .then(() => {
